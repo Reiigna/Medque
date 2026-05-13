@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="login-box" style="max-width:500px">
+  <div class="login-logo" style="font-size:22px;margin-bottom:4px">🦷 Patient Registration</div>
+  <p class="login-sub">Create your Medque account</p>
+
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Full Name</label>
+      <input type="text" name="full_name" class="form-control" placeholder="Your full name" required/>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Username</label>
+      <input type="text" name="username" class="form-control" placeholder="Choose a username" required/>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      <input type="password" name="password" class="form-control" placeholder="Choose a password" required/>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Priority Status</label>
+      <select name="priority_status" class="form-select">
+        <option value="none">None</option>
+        <option value="pwd">Person with Disability (PWD)</option>
+        <option value="senior">Senior Citizen</option>
+        <option value="pregnant">Pregnant</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-ocean w-100" style="padding:11px">Create Account</button>
+  </form>
+
+  <hr style="border-color:var(--steel-lt);margin:20px 0"/>
+  <p class="text-center mb-0" style="font-size:13px;color:var(--text-soft)">
+    Already have an account? <a href="{{ url_for('login') }}" class="ocean-link">Login here</a>
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% block title %}My Queue Status{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="row mb-4">
+      <div class="col">
+        <h4 class="fw-bold" style="font-family:'Syne',sans-serif;color:var(--ocean)">My Queue Status</h4>
+        <p class="small mb-0" style="color:var(--text-soft)">
+          Auto-refreshes in <span id="refresh-count" style="color:var(--ocean);font-weight:600">10</span>s
+          &nbsp;·&nbsp; <span id="typing-notice" style="display:none;color:var(--amber)">⏸ Paused while typing</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Queue Status Card -->
+    {% if my_entry %}
+    <div class="card shadow-sm mb-4" style="border:2px solid var(--aqua)">
+      <div class="card-body text-center py-4">
+        <p class="small mb-1" style="color:var(--text-soft)">Your position in queue</p>
+        <div class="big-number">{{ my_position }}</div>
+        <p class="small mt-2" style="color:var(--text-mid)">
+          Estimated wait: <strong>~{{ wait_time }} minutes</strong>
+        </p>
+        {% set bar_width = 100 - (my_position * 12) %}
+        {% if bar_width < 10 %}{% set bar_width = 10 %}{% endif %}
+        {% if bar_width > 100 %}{% set bar_width = 100 %}{% endif %}
+        <div class="progress my-3" style="height:8px;">
+          <div class="progress-bar bg-teal" style="width: {{ bar_width }}%"></div>
+        </div>
+        <p class="small" style="color:var(--text-soft)">{{ my_position - 1 }} patient(s) ahead of you</p>
+
+        {% if my_position == 1 %}
+        <div class="alert alert-success mt-3 mb-0">
+          <strong>🦷 It's your turn!</strong> Please proceed to the clinic now.
+        </div>
+        {% elif my_position == 2 %}
+        <div class="alert alert-warning mt-3 mb-0">
+          <strong>⏰ You're next!</strong> Please head to the clinic now.
+          <div class="countdown-badge mt-2">
+            <div class="countdown-dot"></div>
+            1 patient ahead of you
+          </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info mt-3 mb-0">
+          <strong>📍 Suggested arrival:</strong>
+          Come to the clinic in about <strong>~{{ show_up_time }} minutes</strong>.
+          <div class="countdown-badge mt-2">
+            <div class="countdown-dot"></div>
+            {{ my_position - 1 }} turn(s) before you · Est. ~{{ wait_time }} min wait
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="concern-box mx-auto mt-3">
+          <small class="text-uppercase fw-bold d-block mb-1" style="font-size:10px;color:var(--text-soft)">Your concern</small>
+          {{ my_entry.concern }}
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="card shadow-sm mb-4">
+      <div class="card-body text-center py-4" style="color:var(--text-soft)">
+        <p style="font-size:32px">🪑</p>
+        <p class="fw-500" style="color:var(--text-mid)">You are not currently in the queue.</p>
+        <p class="small">Book an appointment below or visit the clinic and the secretary will add you.</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Currently Being Seen -->
+    {% if current %}
+    <div class="card shadow-sm mb-4" style="background:var(--mist);border-color:var(--steel-lt)">
+      <div class="card-body py-3">
+        <small class="text-uppercase fw-bold" style="font-size:10px;color:var(--text-soft)">Now being seen</small>
+        <p class="mb-0 fw-bold" style="color:var(--ocean)" id="live-current-patient">{{ current.patient.full_name }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- My Booked Appointments -->
+    {% if my_appointments %}
+    <div class="card shadow-sm mb-4">
+      <div class="card-header">
+        <h6>My Booked Appointments</h6>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for appt in my_appointments %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-500 small" style="color:var(--text-dark)">{{ appt.concern }}</div>
+              <div style="font-size:11px;color:var(--text-soft)">
+                📅 {{ appt.appointment_date.strftime('%B %d, %Y') }}
+                &nbsp;·&nbsp;
+                🕐 {{ appt.appointment_time }}
+              </div>
+            </div>
+            <span class="badge bg-warning">Pending</span>
+          </div>
+          <div style="font-size:11px;color:var(--text-soft);margin-top:4px">
+            ⏳ Waiting for secretary to admit you on your appointment date.
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Booking Form -->
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h6>Book an Appointment</h6>
+      </div>
+      <div class="card-body">
+        <p class="small mb-3" style="color:var(--text-soft)">
+          Reserve your slot in advance. No need to wait in the clinic — just show up near your turn.
+        </p>
+        <form method="POST" action="{{ url_for('book_appointment') }}" id="booking-form">
+          <div class="mb-3">
+            <label class="form-label">Chief Concern</label>
+            <input type="text" name="concern" id="concern-input" class="form-control" placeholder="e.g. Tooth pain, cleaning..." required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Priority Status</label>
+            <select name="priority_status" class="form-select">
+              <option value="none">None</option>
+              <option value="pwd">PWD</option>
+              <option value="senior">Senior Citizen</option>
+              <option value="pregnant">Pregnant</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Preferred Date</label>
+            <input type="date" name="appointment_date" id="appt-date" class="form-control" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Preferred Time</label>
+            <div id="time-slots-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px">
+              <div style="color:var(--text-soft);font-size:13px;grid-column:1/-1">
+                Pick a date first to see available times.
+              </div>
+            </div>
+            <input type="hidden" name="appointment_time" id="selected-time" required/>
+          </div>
+          <button type="submit" class="btn btn-ocean w-100" style="padding:11px">Book My Slot</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Time slot picker ──────────────────────────────────────────────────────────
+const allSlots = {{ time_slots | tojson }};
+const dateInput = document.getElementById('appt-date');
+const slotsGrid = document.getElementById('time-slots-grid');
+const selectedTimeInput = document.getElementById('selected-time');
+
+dateInput.addEventListener('change', function() {
+  const date = this.value;
+  if (!date) return;
+
+  slotsGrid.innerHTML = '<div style="color:var(--text-soft);font-size:13px">Loading slots...</div>';
+
+  fetch(`/api/booked_slots?date=${date}`)
+    .then(r => r.json())
+    .then(data => {
+      const booked = data.booked;
+      slotsGrid.innerHTML = '';
+      selectedTimeInput.value = '';
+
+      allSlots.forEach(slot => {
+        const isBooked = booked.includes(slot);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = slot;
+        btn.style.cssText = `
+          padding: 8px 4px;
+          border-radius: 10px;
+          font-size: 13px;
+          font-family: 'Instrument Sans', sans-serif;
+          font-weight: 500;
+          cursor: ${isBooked ? 'not-allowed' : 'pointer'};
+          border: 1.5px solid ${isBooked ? '#ddd' : 'var(--steel-lt)'};
+          background: ${isBooked ? '#f5f5f5' : '#fff'};
+          color: ${isBooked ? '#bbb' : 'var(--text-dark)'};
+          transition: all 0.15s;
+        `;
+
+        if (isBooked) {
+          btn.disabled = true;
+          btn.title = 'Already booked';
+          btn.textContent = slot + ' ✗';
+        } else {
+          btn.addEventListener('click', function() {
+            // Deselect all
+            slotsGrid.querySelectorAll('button').forEach(b => {
+              if (!b.disabled) {
+                b.style.background = '#fff';
+                b.style.borderColor = 'var(--steel-lt)';
+                b.style.color = 'var(--text-dark)';
+              }
+            });
+            // Select this one
+            btn.style.background = 'var(--ocean)';
+            btn.style.borderColor = 'var(--ocean)';
+            btn.style.color = '#fff';
+            selectedTimeInput.value = slot;
+          });
+        }
+
+        slotsGrid.appendChild(btn);
+      });
+    });
+});
+
+// ── Smart refresh — pauses when typing ───────────────────────────────────────
+let userTyping = false;
+let typingTimer;
+let secondsLeft = 10;
+
+const countEl = document.getElementById('refresh-count');
+const typingNotice = document.getElementById('typing-notice');
+
+document.addEventListener('input', () => {
+  userTyping = true;
+  if (typingNotice) typingNotice.style.display = 'inline';
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => {
+    userTyping = false;
+    if (typingNotice) typingNotice.style.display = 'none';
+  }, 3000);
+});
+
+document.addEventListener('change', function(e) {
+  // Don't pause refresh for date picker change (it triggers slot loading)
+  if (e.target.id === 'appt-date') return;
+  userTyping = true;
+  if (typingNotice) typingNotice.style.display = 'inline';
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => {
+    userTyping = false;
+    if (typingNotice) typingNotice.style.display = 'none';
+  }, 3000);
+});
+
+setInterval(() => {
+  if (userTyping) {
+    secondsLeft = 10; // reset countdown while typing
+    if (countEl) countEl.textContent = secondsLeft;
+    return;
+  }
+  secondsLeft--;
+  if (countEl) countEl.textContent = secondsLeft;
+  if (secondsLeft <= 0) location.reload();
+}, 1000);
+</script>
+{% endblock %}

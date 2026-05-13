@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% block title %}Secretary Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col">
+    <h4 class="fw-bold teal-text">Secretary Dashboard</h4>
+    <p class="text-muted small mb-0">Manage the patient queue</p>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-number">{{ queue|length }}</div>
+      <div class="stat-label">In Queue</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-number">{{ served_today }}</div>
+      <div class="stat-label">Served Today</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-number">{{ priority_count }}</div>
+      <div class="stat-label">Priority Patients</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-number">~12</div>
+      <div class="stat-label">Avg Wait (min)</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Queue List -->
+  <div class="col-md-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white border-bottom">
+        <h6 class="fw-bold mb-0 teal-text">Live Queue</h6>
+      </div>
+      <div class="card-body p-0">
+        {% if queue %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Patient</th>
+                <th>Concern</th>
+                <th>Priority</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="queue-tbody">
+              {% for entry in queue %}
+              <tr class="{% if loop.first %}table-success{% endif %}">
+                <td class="fw-bold">{{ loop.index }}</td>
+                <td>{{ entry.patient.full_name }}</td>
+                <td class="text-muted small">{{ entry.concern }}</td>
+                <td>
+                  {% if entry.is_emergency %}
+                    <span class="badge bg-danger">Emergency</span>
+                  {% elif entry.patient.priority_status == 'pwd' %}
+                    <span class="badge badge-pwd">PWD</span>
+                  {% elif entry.patient.priority_status == 'senior' %}
+                    <span class="badge badge-priority">Senior</span>
+                  {% elif entry.patient.priority_status == 'pregnant' %}
+                    <span class="badge badge-priority">Pregnant</span>
+                  {% elif entry.patient.patient_type == 'returning' %}
+                    <span class="badge badge-returning">Returning</span>
+                  {% else %}
+                    <span class="badge badge-new">New</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <form method="POST" action="{{ url_for('remove_from_queue', queue_id=entry.id) }}" style="display:inline">
+                    <button class="btn btn-sm btn-outline-secondary">Done</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <p>No patients in queue.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Form -->
+  <div class="col-md-5">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom">
+        <h6 class="fw-bold mb-0 teal-text">Register Patient</h6>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('add_patient') }}">
+          <div class="mb-3">
+            <label class="form-label fw-500">Full Name</label>
+            <input type="text" name="full_name" class="form-control" placeholder="Patient name" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-500">Patient Type</label>
+            <select name="patient_type" class="form-select">
+              <option value="new">New Patient</option>
+              <option value="returning">Returning Patient</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-500">Chief Concern</label>
+            <input type="text" name="concern" class="form-control" placeholder="e.g. Tooth extraction" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-500">Priority Status</label>
+            <select name="priority_status" class="form-select">
+              <option value="none">None</option>
+              <option value="pwd">PWD</option>
+              <option value="senior">Senior Citizen</option>
+              <option value="pregnant">Pregnant</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-teal w-100">Add to Queue</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Emergency Override -->
+    <div class="card shadow-sm border-danger">
+      <div class="card-header bg-danger text-white">
+        <h6 class="fw-bold mb-0">⚠ Emergency Override</h6>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('emergency_override') }}">
+          <div class="mb-3">
+            <label class="form-label fw-500">Patient Name</label>
+            <input type="text" name="full_name" class="form-control" placeholder="Emergency patient name" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-500">Concern</label>
+            <input type="text" name="concern" class="form-control" placeholder="Emergency description" required/>
+          </div>
+          <button type="submit" class="btn btn-danger w-100">Override — Send to Front</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/queue.js') }}"></script>
+{% endblock %}

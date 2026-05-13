@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="login-box">
+  <div class="login-logo">Med<span>que</span> 🦷</div>
+  <p class="login-sub">Smart Priority-Based Patient Queueing System</p>
+
+  <!-- 3 Role Cards -->
+  <div class="role-cards">
+    <div class="role-card" onclick="selectRole('secretary')" id="card-secretary">
+      <div class="role-icon sec">🗂️</div>
+      <div class="role-title">Secretary</div>
+      <div class="role-desc">Manage queue & patients</div>
+    </div>
+    <div class="role-card" onclick="selectRole('doctor')" id="card-doctor">
+      <div class="role-icon doc">🩺</div>
+      <div class="role-title">Doctor</div>
+      <div class="role-desc">View & call patients</div>
+    </div>
+    <div class="role-card" onclick="selectRole('patient')" id="card-patient">
+      <div class="role-icon pat">🙋</div>
+      <div class="role-title">Patient</div>
+      <div class="role-desc">Check queue & book</div>
+    </div>
+  </div>
+
+  <!-- Login Form -->
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Username</label>
+      <input type="text" name="username" id="username-input" class="form-control" placeholder="Enter your username" required/>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      <input type="password" name="password" class="form-control" placeholder="Enter your password" required/>
+    </div>
+    <button type="submit" class="btn btn-ocean w-100" style="padding:11px">Login</button>
+  </form>
+
+  <hr style="border-color:var(--steel-lt);margin:20px 0"/>
+  <p class="text-center mb-0" style="font-size:13px;color:var(--text-soft)">
+    New patient? <a href="{{ url_for('register') }}" class="ocean-link">Register here</a>
+  </p>
+</div>
+
+<script>
+function selectRole(role) {
+  // Highlight selected card
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card-' + role).classList.add('selected');
+  // Auto-fill username hint
+  const hints = { secretary: 'secretary', doctor: 'doctor', patient: '' };
+  const input = document.getElementById('username-input');
+  if (hints[role] !== '') input.value = hints[role];
+  else input.value = '';
+  input.focus();
+}
+</script>
+{% endblock %}
