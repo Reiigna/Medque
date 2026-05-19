@@ -19,25 +19,25 @@ def get_priority_score(patient_type, priority_status):
 
 def get_sorted_queue():
     """
-    Returns all waiting queue entries sorted by priority score,
-    then by time they joined (FIFO within same priority).
-    Uses Python's heapq for heap-based sorting.
+    Fetches all active queue entries that are either waiting in the lobby 
+    or currently inside the examination room with the doctor.
     """
-    waiting = Queue.query.filter_by(status='waiting').all()
-    heap = []
-    for entry in waiting:
-        # Tuple: (score, datetime, entry) — heapq sorts by first element, then second
-        heapq.heappush(heap, (entry.priority_score, entry.queued_at, entry))
-    sorted_queue = []
-    while heap:
-        _, _, entry = heapq.heappop(heap)
-        sorted_queue.append(entry)
-    return sorted_queue
+    return Queue.query.filter(Queue.status.in_(['waiting', 'in_progress'])).all()
 
 def get_current_patient():
     """Returns the patient currently being seen (status = in_progress)."""
     return Queue.query.filter_by(status='in_progress').first()
 
-def estimate_wait_time(position, avg_minutes_per_patient=12):
-    """Estimates wait time in minutes based on queue position."""
-    return position * avg_minutes_per_patient
+def estimate_wait_time(queue_position):
+    """
+    Estimates wait time in minutes based on the number of people ahead.
+    Assumes an average of 15 minutes per dental/medical checkup consultation.
+    """
+    if queue_position <= 0:
+        return 0
+        
+    AVERAGE_MINUTES_PER_PATIENT = 15
+    estimated_minutes = queue_position * AVERAGE_MINUTES_PER_PATIENT
+    
+    # Safety guard: Ensure we never return a negative calculation tracking glitch
+    return max(0, estimated_minutes)

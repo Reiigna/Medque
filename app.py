@@ -19,10 +19,30 @@ login_manager.login_view = 'login'
 
 # Available time slots for appointments
 TIME_SLOTS = [
-    '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-    '11:00', '11:30', '13:00', '13:30', '14:00', '14:30',
-    '15:00', '15:30', '16:00', '16:30'
+    '8:00', '08:30', '09:00', '09:30', '10:00', '10:30',
+    '11:00', '11:30', '1:00', '1:30', '2:00', '2:30',
+    '3:00', '3:30', '4:00', '4:30'
 ]
+
+# ── GLOBAL MEMORY TRACKERS ───────────────────────────────────────────────────
+CURRENT_OPERATIONAL_DATE = date.today()
+SESSION_SERVED_COUNT = 0
+
+def _get_todays_served_count():
+    """
+    Tracks and counts served patients globally in system memory.
+    Wipes the session count to 0 instantly when a new calendar day is detected.
+    """
+    global CURRENT_OPERATIONAL_DATE, SESSION_SERVED_COUNT
+    
+    # Check if the computer's clock has progressed to a new day
+    if date.today() != CURRENT_OPERATIONAL_DATE:
+        CURRENT_OPERATIONAL_DATE = date.today()
+        SESSION_SERVED_COUNT = 0  # AUTOMATIC RESETS AT MIDNIGHT
+        
+    return SESSION_SERVED_COUNT
+
+# ── Auth Helpers ─────────────────────────────────────────────────────────────
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -39,7 +59,7 @@ def role_required(*roles):
         return decorated
     return decorator
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
+# ── Auth Routes ───────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
@@ -90,7 +110,7 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
-# ── Secretary ─────────────────────────────────────────────────────────────────
+# ── Secretary Dashboard ───────────────────────────────────────────────────────
 
 @app.route('/secretary')
 @login_required
@@ -98,15 +118,21 @@ def register():
 def secretary_dashboard():
     queue = get_sorted_queue()
     current = get_current_patient()
-    served_today = Queue.query.filter_by(status='done').count()
+    
+    served_today = _get_todays_served_count()
+        
     priority_count = sum(1 for q in queue if q.priority_score <= 1)
     appointments = Appointment.query.filter_by(status='pending').order_by(
         Appointment.appointment_date, Appointment.appointment_time).all()
+
+    initial_wait = max(0, int(estimate_wait_time(len(queue)))) if queue else 0
+    
     return render_template('secretary/dashboard.html',
                            queue=queue, current=current,
                            served_today=served_today,
                            priority_count=priority_count,
-                           appointments=appointments)
+                           appointments=appointments,
+                           initial_wait=initial_wait)
 
 @app.route('/secretary/add_patient', methods=['POST'])
 @login_required
@@ -127,11 +153,11 @@ def add_patient():
     else:
         patient = Patient(full_name=full_name, patient_type=patient_type,
                           priority_status=priority_status)
-        db.session.add(patient)
-        db.session.flush()
+    db.session.add(patient)
+    db.session.flush()
 
     score = get_priority_score(patient_type, priority_status)
-    entry = Queue(patient_id=patient.id, concern=concern, priority_score=score)
+    entry = Queue(patient_id=patient.id, concern=concern, priority_score=score, status='waiting')
     db.session.add(entry)
     db.session.commit()
     flash(f'{full_name} added to queue.', 'success')
@@ -142,11 +168,12 @@ def add_patient():
 @role_required('secretary')
 def admit_appointment(appt_id):
     appt = Appointment.query.get_or_404(appt_id)
-    appt.status = 'admitted'
+    appt.status = 'approved'
     patient = appt.patient
     patient.priority_status = appt.priority_status
     score = get_priority_score(patient.patient_type, appt.priority_status)
-    entry = Queue(patient_id=patient.id, concern=appt.concern, priority_score=score)
+    
+    entry = Queue(patient_id=patient.id, concern=appt.concern, priority_score=score, status='waiting')
     db.session.add(entry)
     db.session.commit()
     flash(f'{patient.full_name} admitted into the queue.', 'success')
@@ -157,7 +184,7 @@ def admit_appointment(appt_id):
 @role_required('secretary')
 def cancel_appointment(appt_id):
     appt = Appointment.query.get_or_404(appt_id)
-    appt.status = 'cancelled'
+    appt.status = 'disapproved'
     db.session.commit()
     flash('Appointment cancelled.', 'warning')
     return redirect(url_for('secretary_dashboard'))
@@ -173,22 +200,28 @@ def emergency_override():
     db.session.add(patient)
     db.session.flush()
     entry = Queue(patient_id=patient.id, concern=concern,
-                  priority_score=0, is_emergency=True)
+                  priority_score=0, is_emergency=True, status='waiting')
     db.session.add(entry)
     db.session.commit()
     flash(f'EMERGENCY: {full_name} added to front of queue!', 'danger')
     return redirect(url_for('secretary_dashboard'))
 
-@app.route('/secretary/remove/<int:queue_id>', methods=['POST'])
+@app.route('/secretary/prepare/<int:queue_id>', methods=['POST'])
 @login_required
 @role_required('secretary')
-def remove_from_queue(queue_id):
+def remove_from_queue(queue_id):  # Restored old name so HTML doesn't crash
+    """
+    Changes a patient's status from 'waiting' to 'ready' 
+    to show that the secretary is preparing their vitals/records.
+    """
     entry = Queue.query.get_or_404(queue_id)
-    entry.status = 'done'
-    db.session.commit()
+    if entry.status == 'waiting':
+        entry.status = 'ready'
+        db.session.commit()
+        flash(f'Patient records prepared. Waiting for Doctor.', 'info')
     return redirect(url_for('secretary_dashboard'))
 
-# ── Doctor ────────────────────────────────────────────────────────────────────
+# ── Doctor Dashboard ──────────────────────────────────────────────────────────
 
 @app.route('/doctor')
 @login_required
@@ -196,10 +229,13 @@ def remove_from_queue(queue_id):
 def doctor_dashboard():
     current = get_current_patient()
     upcoming = get_sorted_queue()[:5]
-    served_today = Queue.query.filter_by(status='done').count()
+
+    served_today = _get_todays_served_count()
+        
     waiting_count = Queue.query.filter_by(status='waiting').count()
     appointments = Appointment.query.filter_by(status='pending').order_by(
         Appointment.appointment_date, Appointment.appointment_time).all()
+        
     return render_template('doctor/dashboard.html',
                            current=current, upcoming=upcoming,
                            served_today=served_today,
@@ -210,19 +246,29 @@ def doctor_dashboard():
 @login_required
 @role_required('doctor')
 def next_patient():
+    global SESSION_SERVED_COUNT  # Sync with global memory tracker
+    
+    # 1. Clear out the active patient currently sitting in the exam room
     current = get_current_patient()
     if current:
         current.status = 'done'
         db.session.commit()
+        SESSION_SERVED_COUNT += 1  # Increment memory tracking count sequentially
+        
+    # 2. Pull the next person from the sorted queue and move them in
     queue = get_sorted_queue()
     if queue:
         queue[0].status = 'in_progress'
+        db.session.add(queue[0])
         db.session.commit()
     else:
-        flash('No more patients in queue.', 'info')
+        if not current:
+            flash('No more patients in queue.', 'info')
+        
+    db.session.flush() 
     return redirect(url_for('doctor_dashboard'))
 
-# ── Patient ───────────────────────────────────────────────────────────────────
+# ── Patient Dashboard ─────────────────────────────────────────────────────────
 
 @app.route('/patient')
 @login_required
@@ -254,7 +300,6 @@ def patient_dashboard():
             status='pending'
         ).order_by(Appointment.appointment_date, Appointment.appointment_time).all()
 
-    # Get booked time slots for the booking form (used by JS)
     return render_template('patient/dashboard.html',
                            my_entry=my_entry,
                            my_position=my_position,
@@ -274,7 +319,6 @@ def book_appointment():
     appt_time = request.form['appointment_time']
     priority_status = request.form.get('priority_status', 'none')
 
-    # Check if that time slot is already taken
     existing = Appointment.query.filter_by(
         appointment_date=date.fromisoformat(appt_date),
         appointment_time=appt_time,
@@ -297,7 +341,7 @@ def book_appointment():
     flash('Appointment booked! The secretary will admit you to the queue on your chosen date.', 'success')
     return redirect(url_for('patient_dashboard'))
 
-# ── API (real-time) ───────────────────────────────────────────────────────────
+# ── API Real-Time Endpoints ───────────────────────────────────────────────────
 
 @app.route('/api/queue')
 @login_required
@@ -306,9 +350,17 @@ def api_queue():
     current = get_current_patient()
     appointments = Appointment.query.filter_by(status='pending').order_by(
         Appointment.appointment_date, Appointment.appointment_time).all()
+    
+    calculated_wait = estimate_wait_time(len(queue)) if queue else 0
+    avg_wait = max(0, int(calculated_wait))
+
+    served_today = _get_todays_served_count()
+
     data = {
         'queue_length': len(queue),
         'pending_appointments': len(appointments),
+        'avg_wait': avg_wait,
+        'served_today': served_today, 
         'current': {
             'name': current.patient.full_name,
             'concern': current.concern
@@ -320,7 +372,8 @@ def api_queue():
                 'concern': e.concern,
                 'score': e.priority_score,
                 'priority_status': e.patient.priority_status,
-                'is_emergency': e.is_emergency
+                'is_emergency': e.is_emergency,
+                'status': e.status
             } for e in queue
         ],
         'appointments': [
@@ -339,7 +392,6 @@ def api_queue():
 @app.route('/api/booked_slots')
 @login_required
 def api_booked_slots():
-    """Returns booked time slots for a given date — used by patient booking form."""
     selected_date = request.args.get('date')
     if not selected_date:
         return jsonify({'booked': []})
@@ -349,7 +401,7 @@ def api_booked_slots():
     ).all()
     return jsonify({'booked': [a.appointment_time for a in booked]})
 
-# ── Seed ──────────────────────────────────────────────────────────────────────
+# ── Seed Data Configuration ───────────────────────────────────────────────────
 
 def seed_users():
     if not User.query.filter_by(username='secretary').first():
