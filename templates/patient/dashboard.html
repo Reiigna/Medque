@@ -2,172 +2,204 @@
 {% block title %}My Queue Status{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
+<div class="d-flex flex-column min-vh-100 justify-content-between">
+  
+  <div class="container-fluid px-0">
     <div class="row mb-4">
-      <div class="col">
-        <h4 class="fw-bold" style="font-family:'Syne',sans-serif;color:var(--ocean)">My Queue Status</h4>
-        <p class="small mb-0" style="color:var(--text-soft)">
-          Auto-refreshes in <span id="refresh-count" style="color:var(--ocean);font-weight:600">10</span>s
-          &nbsp;·&nbsp; <span id="typing-notice" style="display:none;color:var(--amber)">⏸ Paused while typing</span>
-        </p>
+      <div class="col-12">
+        <div class="dashboard-header-banner px-4 position-relative overflow-hidden rounded-4">
+          <div class="header-bg-overlay"></div>
+          <div class="header-foreground-content d-flex flex-column flex-md-row justify-content-between align-items-md-center position-relative">
+            <div>
+              <h4 class="fw-bold text-white mb-1 tracking-tight" style="font-family:'Syne', sans-serif;">Patient Dashboard</h4>
+              <p class="text-white-50 small mb-0">Real-time visibility for simplified clinical workflows.</p>
+            </div>
+            <div class="mt-3 mt-md-0 text-md-end">
+              <span class="modern-header-quote-lg" style="color: #FFFFFF !important; font-family: 'Syne', sans-serif;">"EMPOWERING EXCELLENCE THROUGH SIMPLIFIED CARE."</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Queue Status Card -->
-    {% if my_entry %}
-    <div class="card shadow-sm mb-4" style="border:2px solid var(--aqua)">
-      <div class="card-body text-center py-4">
-        <p class="small mb-1" style="color:var(--text-soft)">Your position in queue</p>
-        <div class="big-number">{{ my_position }}</div>
-        <p class="small mt-2" style="color:var(--text-mid)">
-          Estimated wait: <strong>~{{ wait_time }} minutes</strong>
-        </p>
-        {% set bar_width = 100 - (my_position * 12) %}
-        {% if bar_width < 10 %}{% set bar_width = 10 %}{% endif %}
-        {% if bar_width > 100 %}{% set bar_width = 100 %}{% endif %}
-        <div class="progress my-3" style="height:8px;">
-          <div class="progress-bar bg-teal" style="width: {{ bar_width }}%"></div>
+    <div class="row justify-content-center mb-5">
+      <div class="col-md-6">
+        <div class="row mb-4">
+          <div class="col">
+            <h4 class="fw-bold" style="font-family:'Syne',sans-serif;color:var(--ocean)">My Queue Status</h4>
+            <p class="small mb-0" style="color:var(--text-soft)">
+              Auto-refreshes in <span id="refresh-count" style="color:var(--ocean);font-weight:600">120</span>s
+              &nbsp;·&nbsp; <span id="typing-notice" style="display:none;color:var(--amber)">⏸ Paused while typing</span>
+            </p>
+          </div>
         </div>
-        <p class="small" style="color:var(--text-soft)">{{ my_position - 1 }} patient(s) ahead of you</p>
 
-        {% if my_position == 1 %}
-        <div class="alert alert-success mt-3 mb-0">
-          <strong>🦷 It's your turn!</strong> Please proceed to the clinic now.
-        </div>
-        {% elif my_position == 2 %}
-        <div class="alert alert-warning mt-3 mb-0">
-          <strong>⏰ You're next!</strong> Please head to the clinic now.
-          <div class="countdown-badge mt-2">
-            <div class="countdown-dot"></div>
-            1 patient ahead of you
+        {% if my_entry %}
+        <div class="card shadow-sm mb-4" style="border:2px solid var(--aqua)">
+          <div class="card-body text-center py-4">
+            <p class="small mb-1" style="color:var(--text-soft)">Your position in queue</p>
+            <div class="big-number" style="font-size: 64px; font-weight: 800; color: var(--ocean); font-family: 'Syne', sans-serif;">{{ my_position }}</div>
+            <p class="small mt-2" style="color:var(--text-mid)">
+              Estimated wait: <strong>~{{ wait_time }} minutes</strong>
+            </p>
+            {% set bar_width = 100 - (my_position * 12) %}
+            {% if bar_width < 10 %}{% set bar_width = 10 %}{% endif %}
+            {% if bar_width > 100 %}{% set bar_width = 100 %}{% endif %}
+            <div class="progress my-3" style="height:8px;">
+              <div class="progress-bar bg-teal" style="width: {{ bar_width }}%"></div>
+            </div>
+            <p class="small" style="color:var(--text-soft)">{{ my_position - 1 }} patient(s) ahead of you</p>
+
+            {% if my_position == 1 %}
+            <div class="alert alert-success mt-3 mb-0">
+              <strong>🦷 It's your turn!</strong> Please proceed to the clinic now.
+            </div>
+            {% elif my_position == 2 %}
+            <div class="alert alert-warning mt-3 mb-0">
+              <strong>⏰ You're next!</strong> Please head to the clinic now.
+            </div>
+            {% else %}
+            <div class="alert alert-info mt-3 mb-0">
+              <strong>📍 Suggested arrival:</strong>
+              Come to the clinic in about <strong>~{{ show_up_time }} minutes</strong>.
+            </div>
+            {% endif %}
+
+            <div class="concern-box mx-auto mt-3" style="background: var(--mist); padding: 10px; border-radius: 8px; border: 1px dashed var(--steel-lt);">
+              <small class="text-uppercase fw-bold d-block mb-1" style="font-size:10px;color:var(--text-soft)">Your concern</small>
+              {{ my_entry.concern }}
+            </div>
           </div>
         </div>
         {% else %}
-        <div class="alert alert-info mt-3 mb-0">
-          <strong>📍 Suggested arrival:</strong>
-          Come to the clinic in about <strong>~{{ show_up_time }} minutes</strong>.
-          <div class="countdown-badge mt-2">
-            <div class="countdown-dot"></div>
-            {{ my_position - 1 }} turn(s) before you · Est. ~{{ wait_time }} min wait
+        <div class="card shadow-sm mb-4">
+          <div class="card-body text-center py-4" style="color:var(--text-soft)">
+            <p style="font-size:32px">🪑</p>
+            <p class="fw-500" style="color:var(--text-mid)">You are not currently in the queue.</p>
+            <p class="small">Book an appointment below or visit the clinic and the secretary will add you.</p>
           </div>
         </div>
         {% endif %}
 
-        <div class="concern-box mx-auto mt-3">
-          <small class="text-uppercase fw-bold d-block mb-1" style="font-size:10px;color:var(--text-soft)">Your concern</small>
-          {{ my_entry.concern }}
+        {% if current %}
+        <div class="card shadow-sm mb-4" style="background:var(--mist);border-color:var(--steel-lt)">
+          <div class="card-body py-3">
+            <small class="text-uppercase fw-bold" style="font-size:10px;color:var(--text-soft)">Now being seen</small>
+            <p class="mb-0 fw-bold" style="color:var(--ocean)">{{ current.patient.full_name }}</p>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="card shadow-sm">
+          <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold" style="color: var(--text-dark)">Book an Appointment</h6>
+          </div>
+          <div class="card-body">
+            <p class="small mb-3" style="color:var(--text-soft)">
+              Reserve your slot in advance. No need to wait in the clinic — just show up near your turn.
+            </p>
+            <form method="POST" action="{{ url_for('book_appointment') }}" id="booking-form">
+              <div class="mb-3">
+                <label class="form-label">Chief Concern</label>
+                <input type="text" name="concern" id="concern-input" class="form-control" placeholder="e.g. Tooth pain" required/>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Preferred Date</label>
+                <input type="date" name="appointment_date" id="appt-date" class="form-control" required/>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Preferred Time</label>
+                <div id="time-slots-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px">
+                  <div style="color:var(--text-soft);font-size:13px;grid-column:1/-1">Pick a date first to see available times.</div>
+                </div>
+                <input type="hidden" name="appointment_time" id="selected-time" required/>
+              </div>
+              <button type="submit" class="btn btn-ocean w-100" style="background-color: var(--ocean); color: #fff; padding: 11px; border-radius: 8px; border: none; font-weight: 500;">Book My Slot</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
-
-    {% else %}
-    <div class="card shadow-sm mb-4">
-      <div class="card-body text-center py-4" style="color:var(--text-soft)">
-        <p style="font-size:32px">🪑</p>
-        <p class="fw-500" style="color:var(--text-mid)">You are not currently in the queue.</p>
-        <p class="small">Book an appointment below or visit the clinic and the secretary will add you.</p>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Currently Being Seen -->
-    {% if current %}
-    <div class="card shadow-sm mb-4" style="background:var(--mist);border-color:var(--steel-lt)">
-      <div class="card-body py-3">
-        <small class="text-uppercase fw-bold" style="font-size:10px;color:var(--text-soft)">Now being seen</small>
-        <p class="mb-0 fw-bold" style="color:var(--ocean)" id="live-current-patient">{{ current.patient.full_name }}</p>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- My Booked Appointments -->
-    {% if my_appointments %}
-    <div class="card shadow-sm mb-4">
-      <div class="card-header">
-        <h6>My Booked Appointments</h6>
-      </div>
-      <ul class="list-group list-group-flush">
-        {% for appt in my_appointments %}
-        <li class="list-group-item">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-500 small" style="color:var(--text-dark)">{{ appt.concern }}</div>
-              <div style="font-size:11px;color:var(--text-soft)">
-                📅 {{ appt.appointment_date.strftime('%B %d, %Y') }}
-                &nbsp;·&nbsp;
-                🕐 {{ appt.appointment_time }}
-              </div>
-            </div>
-            <span class="badge bg-warning">Pending</span>
-          </div>
-          <div style="font-size:11px;color:var(--text-soft);margin-top:4px">
-            ⏳ Waiting for secretary to admit you on your appointment date.
-          </div>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
-
-    <!-- Booking Form -->
-    <div class="card shadow-sm">
-      <div class="card-header">
-        <h6>Book an Appointment</h6>
-      </div>
-      <div class="card-body">
-        <p class="small mb-3" style="color:var(--text-soft)">
-          Reserve your slot in advance. No need to wait in the clinic — just show up near your turn.
-        </p>
-        <form method="POST" action="{{ url_for('book_appointment') }}" id="booking-form">
-          <div class="mb-3">
-            <label class="form-label">Chief Concern</label>
-            <input type="text" name="concern" id="concern-input" class="form-control" placeholder="e.g. Tooth pain, cleaning..." required/>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Priority Status</label>
-            <select name="priority_status" class="form-select">
-              <option value="none">None</option>
-              <option value="pwd">PWD</option>
-              <option value="senior">Senior Citizen</option>
-              <option value="pregnant">Pregnant</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Preferred Date</label>
-            <input type="date" name="appointment_date" id="appt-date" class="form-control" required/>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Preferred Time</label>
-            <div id="time-slots-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px">
-              <div style="color:var(--text-soft);font-size:13px;grid-column:1/-1">
-                Pick a date first to see available times.
-              </div>
-            </div>
-            <input type="hidden" name="appointment_time" id="selected-time" required/>
-          </div>
-          <button type="submit" class="btn btn-ocean w-100" style="padding:11px">Book My Slot</button>
-        </form>
-      </div>
-    </div>
-
   </div>
+
+  <footer class="text-white mt-5 position-relative" 
+          style="background-color: var(--ocean); 
+                 border-top: 4px solid var(--aqua);
+                 width: 100vw;
+                 position: relative;
+                 left: 50%;
+                 right: 50%;
+                 margin-left: -50vw;
+                 margin-right: -50vw;">
+    
+    <div class="container py-5 px-4 px-md-5">
+      <div class="row gy-4">
+        
+        <div class="col-md-4">
+          <h5 class="fw-bold mb-3" style="font-family:'Syne', sans-serif;">About Us</h5>
+          <p class="text-white-50 small pe-md-4 mb-0" style="line-height: 1.6;">
+            We streamline clinical healthcare tracking workflows. By synchronizing precise real-time queue monitors with modern appointment parameters, we return time back to our patients.
+          </p>
+        </div>
+        
+        <div class="col-md-4">
+          <h5 class="fw-bold mb-3" style="font-family:'Syne', sans-serif;">Locations</h5>
+          <div class="text-white-50 small d-flex flex-column gap-2">
+            <div><strong>Main HQ:</strong> 123 Health Medical Avenue, Tower District</div>
+            <div><strong>East Wing:</strong> 456 Care Boulevard, Plaza Level 2</div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <h5 class="fw-bold mb-3" style="font-family:'Syne', sans-serif;">Contact</h5>
+          <div class="text-white-50 small d-flex flex-column gap-2">
+            <div><strong>Phone:</strong> +1 (555) 019-2834</div>
+            <div><strong>Email:</strong> administrative@careclinic.com</div>
+          </div>
+        </div>
+
+      </div>
+      
+      <div class="row">
+        <div class="col-12">
+          <hr class="my-4" style="border-top: 1px solid rgba(255,255,255,0.15); opacity:1;">
+          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center small text-white-50 gap-2">
+            <p class="mb-0">&copy; 2026 Medque. All rights reserved.</p>
+            <p class="mb-0 tracking-widest" style="font-family:'Syne', sans-serif; font-size: 11px; letter-spacing: 1px;">EXCELLENCE THROUGH CARE</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// ── Time slot picker ──────────────────────────────────────────────────────────
+// ── TIME SLOT PICKER ENGINE ──
 const allSlots = {{ time_slots | tojson }};
 const dateInput = document.getElementById('appt-date');
 const slotsGrid = document.getElementById('time-slots-grid');
 const selectedTimeInput = document.getElementById('selected-time');
 
+// NEW BULLETPROOF LOCAL DATE STRATEGY
+const localToday = new Date();
+const localYear = localToday.getFullYear();
+const localMonth = String(localToday.getMonth() + 1).padStart(2, '0');
+const localDay = String(localToday.getDate()).padStart(2, '0');
+
+// Compiles to exactly your current date (e.g., "2026-05-20") matching your computer's clock
+const exactTodayString = `${localYear}-${localMonth}-${localDay}`;
+
+if (dateInput) { 
+    dateInput.setAttribute('min', exactTodayString); 
+}
+
 dateInput.addEventListener('change', function() {
   const date = this.value;
   if (!date) return;
-
-  slotsGrid.innerHTML = '<div style="color:var(--text-soft);font-size:13px">Loading slots...</div>';
+  slotsGrid.innerHTML = '<div style="color:var(--text-soft);font-size:13px">Loading available slots...</div>';
 
   fetch(`/api/booked_slots?date=${date}`)
     .then(r => r.json())
@@ -176,90 +208,89 @@ dateInput.addEventListener('change', function() {
       slotsGrid.innerHTML = '';
       selectedTimeInput.value = '';
 
+      const now = new Date();
+      // Ensure local date string matching configuration patterns
+      const todayString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const isSelectedToday = (date.trim() === todayString.trim());
+
       allSlots.forEach(slot => {
         const isBooked = booked.includes(slot);
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = slot;
-        btn.style.cssText = `
-          padding: 8px 4px;
-          border-radius: 10px;
-          font-size: 13px;
-          font-family: 'Instrument Sans', sans-serif;
-          font-weight: 500;
-          cursor: ${isBooked ? 'not-allowed' : 'pointer'};
-          border: 1.5px solid ${isBooked ? '#ddd' : 'var(--steel-lt)'};
-          background: ${isBooked ? '#f5f5f5' : '#fff'};
-          color: ${isBooked ? '#bbb' : 'var(--text-dark)'};
-          transition: all 0.15s;
-        `;
+        let isPastTime = false;
 
-        if (isBooked) {
+        if (isSelectedToday) {
+          const convertToDecimal = (tStr) => {
+            // Split raw configuration elements (e.g., "14:30" or "2:30")
+            let [h, m] = tStr.split(':').map(Number);
+            
+            // Clinic Business Logic: Map afternoon single digits (1:00 - 4:30) to 24-hour scale
+            if (h >= 1 && h <= 5) {
+              h += 12; // 1:30 becomes 13.5
+            }
+            return h + (m / 60);
+          };
+          
+          const currentDecimalTime = now.getHours() + (now.getMinutes() / 60);
+          if (convertToDecimal(slot) <= currentDecimalTime) {
+            isPastTime = true;
+          }
+        }
+
+        const isDisabled = isBooked || isPastTime;
+        const btn = document.createElement('button');
+        btn.type = 'button'; 
+        btn.textContent = slot;
+        btn.style.cssText = `padding: 8px 4px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: ${isDisabled ? 'not-allowed' : 'pointer'}; border: 1.5px solid ${isDisabled ? '#e2e8f0' : 'var(--steel-lt)'}; background: ${isDisabled ? '#f1f5f9' : '#ffffff'}; color: ${isDisabled ? '#cbd5e1' : 'var(--text-dark)'}; transition: all 0.15s ease;`;
+
+        if (isDisabled) {
           btn.disabled = true;
-          btn.title = 'Already booked';
-          btn.textContent = slot + ' ✗';
         } else {
-          btn.addEventListener('click', function() {
-            // Deselect all
-            slotsGrid.querySelectorAll('button').forEach(b => {
-              if (!b.disabled) {
-                b.style.background = '#fff';
-                b.style.borderColor = 'var(--steel-lt)';
-                b.style.color = 'var(--text-dark)';
-              }
+          btn.addEventListener('click', () => {
+            // Clear prior user selection styling from alternate choices
+            slotsGrid.querySelectorAll('button').forEach(b => { 
+              if (!b.disabled) { 
+                b.style.background = '#fff'; 
+                b.style.color = 'var(--text-dark)'; 
+                b.style.borderColor = 'var(--steel-lt)'; 
+              } 
             });
-            // Select this one
-            btn.style.background = 'var(--ocean)';
-            btn.style.borderColor = 'var(--ocean)';
-            btn.style.color = '#fff';
+            // Apply active interface color matching your theme variables
+            btn.style.background = 'var(--ocean)'; 
+            btn.style.color = '#fff'; 
+            btn.style.borderColor = 'var(--ocean)'; 
             selectedTimeInput.value = slot;
           });
         }
-
         slotsGrid.appendChild(btn);
       });
     });
 });
 
-// ── Smart refresh — pauses when typing ───────────────────────────────────────
-let userTyping = false;
+// ── REFRESH TIMER ──
+let secondsLeft = 120; 
+let userTyping = false; 
 let typingTimer;
-let secondsLeft = 10;
-
 const countEl = document.getElementById('refresh-count');
-const typingNotice = document.getElementById('typing-notice');
+const noticeEl = document.getElementById('typing-notice');
 
-document.addEventListener('input', () => {
-  userTyping = true;
-  if (typingNotice) typingNotice.style.display = 'inline';
-  clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => {
-    userTyping = false;
-    if (typingNotice) typingNotice.style.display = 'none';
-  }, 3000);
-});
-
-document.addEventListener('change', function(e) {
-  // Don't pause refresh for date picker change (it triggers slot loading)
-  if (e.target.id === 'appt-date') return;
-  userTyping = true;
-  if (typingNotice) typingNotice.style.display = 'inline';
-  clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => {
-    userTyping = false;
-    if (typingNotice) typingNotice.style.display = 'none';
-  }, 3000);
+// Pause live window refreshes if the patient is actively describing their symptoms
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    userTyping = true;
+    if (noticeEl) noticeEl.style.display = 'inline';
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => { 
+      userTyping = false; 
+      if (noticeEl) noticeEl.style.display = 'none';
+    }, 4000);
+  }
 });
 
 setInterval(() => {
-  if (userTyping) {
-    secondsLeft = 10; // reset countdown while typing
+  if (!userTyping) {
+    secondsLeft--;
     if (countEl) countEl.textContent = secondsLeft;
-    return;
+    if (secondsLeft <= 0) location.reload();
   }
-  secondsLeft--;
-  if (countEl) countEl.textContent = secondsLeft;
-  if (secondsLeft <= 0) location.reload();
 }, 1000);
 </script>
 {% endblock %}
